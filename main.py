@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D # Required for projection='3d'!
 from scipy.stats import norm
 import scipy
+from matplotlib import cm
 
 def calculateExplicit(x, t, dx, dt, psi, V):
     # Construct hamiltonian
@@ -22,7 +23,10 @@ def calculateExplicit(x, t, dx, dt, psi, V):
 
 def calculateSuzuki(x, t, dx, dt, psi, V):
     exp1 = scipy.linalg.expm(-1j*dt/2 * np.diag(V,0));
-    p = np.diag(np.fft.fftfreq(len(x)),0);
+
+    dp = 1/(max(x)-min(x));
+    p = np.linspace(-len(x)/2*dp, +len(x)/2*dp - dp, len(x) ) # Adapted from course Imaging Physics
+    p = np.diag(p,0)
     exp2 = scipy.linalg.expm(-1j*dt/2 * p**2)
 
     for k in range(1, len(t)):
@@ -31,17 +35,17 @@ def calculateSuzuki(x, t, dx, dt, psi, V):
         t3 = np.dot(exp2, t2);
         t4 = np.fft.ifft(t3);
         psi[k,:] = np.dot(exp1, t4);
-        print(sum(psi[k,:]))
+        #print(sum(psi[k,:]))
 
     return psi
 
 # Define input parameters
 xmin = 0;
-xmax = 10.0;
+xmax = 3*math.pi;
 dx = .01;
 
 tmin = 0
-tmax = 0.5
+tmax = 1.0
 dt = 0.01
 
 # Determine x and t range
@@ -51,16 +55,17 @@ t = np.arange(tmin, tmax, dt)
 X, T =np.meshgrid(x,t)
 
 # Define psi at t=0
-psi0= np.sin(math.pi*x)+1
-rv = norm(loc = 5, scale = 1.0)
-psi0 = rv.pdf(x);
-
-# Normalize
-#psi0 /= sum(psi0);
+psi0 = np.zeros(len(x));
+psi0[int(len(x)*1/3):int(len(x)*2/3)] = np.sin( x[int(len(x)*1/3):int(len(x)*2/3)] - math.pi   )
 
 # Define potential
 V = np.zeros(len(x))
-V[int(len(V)/2)] = 10;
+# Infite square well
+#V[0:int(len(V)/3)] = 9223372036854775807
+#V[int(len(V)*2/3):len(V)] = 9223372036854775807;
+# Wider Well
+V[0:int(len(V)/4)] = 9223372036854775807; # Max int?
+V[int(len(V)*3/4):len(V)] = 9223372036854775807;
 
 # Inititate psi
 psi = np.array(np.zeros([len(t),len(x)]), dtype=np.complex128)
@@ -72,7 +77,7 @@ psiExplicit = calculateExplicit(x, t, dx, dt, np.copy(psi), V);
 # Suzuki/Souflaki/Gyros Method
 psiGyros = calculateSuzuki(x, t, dx, dt, np.copy(psi), V);
 
-# Plot result
+# Plot results
 fig = plt.figure(1)
 ax = fig.gca(projection='3d')
 wire=ax.plot_wireframe(X,T,np.real(psiExplicit),rstride=1, cstride=1)
@@ -85,4 +90,26 @@ ax = fig.gca(projection='3d')
 wire=ax.plot_wireframe(X,T,np.real(psiGyros),rstride=1, cstride=1)
 plt.xlabel("Position")
 plt.ylabel("Time")
+
+fig = plt.figure(3)
+ax = fig.gca(projection='3d')
+surf = ax.plot_surface(X, T, np.real(psiGyros), rstride=1, cstride=1,cmap=cm.coolwarm, linewidth=0, antialiased=False)
+ax.view_init(90, 90); # Top view
+plt.xlabel("Position")
+plt.ylabel("Time")
+fig.colorbar(surf, shrink=0.5, aspect=5)
+# Hide z-axis
+ax.w_zaxis.line.set_lw(0.)
+ax.set_zticks([])
+
+plt.figure(4)
+plt.plot(x,V);
+plt.xlabel('Position')
+plt.ylabel("Potential")
+
+plt.figure(5)
+plt.plot(x,psi0);
+plt.xlabel('Position')
+plt.ylabel("Initial Psy")
+
 
