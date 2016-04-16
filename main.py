@@ -24,8 +24,10 @@ def calculateExplicit(x, t, dx, dt, psi, V):
 def calculateSuzuki(x, t, dx, dt, psi, V):
     exp1 = scipy.linalg.expm(-1j*dt/2 * np.diag(V,0));
 
-    dp = 1/(max(x)-min(x));
-    p = np.linspace(-len(x)/2*dp, +len(x)/2*dp - dp, len(x) ) # Adapted from course Imaging Physics
+    L = (max(x)-min(x))
+    dp = 1/L;
+    #p = np.linspace(-len(x)/2*dp, +len(x)/2*dp - dp, len(x) ) # FFT has zero frequency in first index
+    p = np.fft.fftfreq(len(x)) * len(x) * dp;
     p = np.diag(p,0)
     exp2 = scipy.linalg.expm(-1j*dt/2 * p**2)
 
@@ -45,8 +47,8 @@ xmax = 3*math.pi;
 dx = .01;
 
 tmin = 0
-tmax = 1.0
-dt = 0.01
+tmax = 500.0
+dt = 1
 
 # Determine x and t range
 x = np.arange(xmin, xmax, dx)
@@ -61,11 +63,11 @@ psi0[int(len(x)*1/3):int(len(x)*2/3)] = np.sin( x[int(len(x)*1/3):int(len(x)*2/3
 # Define potential
 V = np.zeros(len(x))
 # Infite square well
-#V[0:int(len(V)/3)] = 9223372036854775807
-#V[int(len(V)*2/3):len(V)] = 9223372036854775807;
+V[0:int(len(V)/3)] = 9223372036854775807
+V[int(len(V)*2/3):len(V)] = 9223372036854775807;
 # Wider Well
-V[0:int(len(V)/4)] = 9223372036854775807; # Max int?
-V[int(len(V)*3/4):len(V)] = 9223372036854775807;
+#V[0:int(len(V)/4)] = 9223372036854775807; # Max int?
+#V[int(len(V)*3/4):len(V)] = 9223372036854775807;
 
 # Inititate psi
 psi = np.array(np.zeros([len(t),len(x)]), dtype=np.complex128)
@@ -93,7 +95,7 @@ plt.ylabel("Time")
 
 fig = plt.figure(3)
 ax = fig.gca(projection='3d')
-surf = ax.plot_surface(X, T, np.real(psiGyros), rstride=1, cstride=1,cmap=cm.coolwarm, linewidth=0, antialiased=False)
+surf = ax.plot_surface(X, T, np.real(psiGyros), rstride=10, cstride=10,cmap=cm.coolwarm, linewidth=0, antialiased=False)
 ax.view_init(90, 90); # Top view
 plt.xlabel("Position")
 plt.ylabel("Time")
