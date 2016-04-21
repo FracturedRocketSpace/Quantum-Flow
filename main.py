@@ -42,6 +42,23 @@ def calculateImplicit(x,t,dx,dt,psi,V):
     print("Done",flush=True)  
     return psi
     
+def calculateCrank(x,t,dx,dt,psi,V):
+    #Construct hamiltonian
+    diagonals=[-2*np.ones(len(x)), np.ones(len(x)-1), np.ones(len(x)-1)] 
+    H = -1/(2 * dx**2) * scipy.sparse.diags(diagonals, [0,1,-1], format="csc")
+    H += scipy.sparse.diags(V,0,format="csc")    
+    inverseDenominator = scipy.sparse.linalg.inv(scipy.sparse.identity(len(x), format="csc")+1j*dt*H/2)
+    operator = (scipy.sparse.identity(len(x), format="csc")-1j*dt*H/2).dot(inverseDenominator)
+    
+    operatorInv = scipy.sparse.linalg.inv(operator)
+
+    #Compute next time step
+    for k in range(0, len(t)-1):
+        psi[k+1,:] = operatorInv.dot(psi[k,:])
+        
+    return psi
+    
+
 def calculateSuzuki(x, t, dx, dt, psi, V):
     print("Calculating FT method...",flush=True)    
     
@@ -118,6 +135,9 @@ psiImplicit = calculateImplicit(x, t, dx, dt, np.copy(psi), V)
 # Suzuki/Souflaki/Gyros Method
 psiGyros = calculateSuzuki(x, t, dx, dt, np.copy(psi), V);
 
+# Crank–Nicholson Method
+psiCrank = calculateCrank(x, t, dx, dt, np.copy(psi), V);
+
 # Plot results
 #fig = plt.figure(1)
 #ax = fig.gca(projection='3d')
@@ -144,8 +164,18 @@ fig.colorbar(surf, shrink=0.5, aspect=5)
 ax.w_zaxis.line.set_lw(0.)
 ax.set_zticks([])
 
-
 fig = plt.figure(3)
+ax = fig.gca(projection='3d')
+surf = ax.plot_surface(X, T, np.real(psiCrank), rstride=10, cstride=10,cmap=cm.coolwarm, linewidth=0, antialiased=False)
+ax.view_init(90, 90); # Top view
+plt.xlabel("Position")
+plt.ylabel("Time")
+fig.colorbar(surf, shrink=0.5, aspect=5)
+# Hide z-axis
+ax.w_zaxis.line.set_lw(0.)
+ax.set_zticks([])
+
+fig = plt.figure(4)
 ax = fig.gca(projection='3d')
 surf = ax.plot_surface(X, T, np.real(psiGyros), rstride=10, cstride=10,cmap=cm.coolwarm, linewidth=0, antialiased=False)
 ax.view_init(90, 90); # Top view
@@ -158,12 +188,12 @@ ax.w_zaxis.line.set_lw(0.)
 ax.set_zticks([])
 
 
-plt.figure(4)
+plt.figure(5)
 plt.plot(x,V);
 plt.xlabel('Position')
 plt.ylabel("Potential")
 
-plt.figure(5)
+plt.figure(6)
 plt.plot(x,psi0);
 plt.xlabel('Position')
 plt.ylabel("Initial Psi")
