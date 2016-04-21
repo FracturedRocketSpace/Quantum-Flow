@@ -3,6 +3,7 @@ import math
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D # Required for projection='3d'!
 from scipy.stats import norm
+from matplotlib import animation
 import scipy
 from matplotlib import cm
 
@@ -16,8 +17,8 @@ ymax = 2*math.pi;
 dy = 0.05;
 
 tmin = 0
-tmax = 100
-dt = 1
+tmax = 0.005
+dt = 0.0001
 
 # Determine x and t range
 x = np.arange(xmin, xmax, dx)
@@ -78,31 +79,32 @@ for k in range(0, len(t)-1):
     psi2[k+1,:] = OpCrankInv.dot(psi2[k,:])
 
 # Plot
-fig = plt.figure(1)
-ax = fig.gca(projection='3d')
-surf = ax.plot_surface(X, Y, np.real(np.reshape(psi[25],(len(x),len(y)))), cmap=cm.coolwarm, linewidth=0, antialiased=False)
-ax.view_init(90, 90); # Top view
-plt.xlabel("Position x")
-plt.ylabel("Position y")
-plt.title("Implicit method")
-fig.colorbar(surf, shrink=0.5, aspect=5)
-# Hide z-axis
-ax.w_zaxis.line.set_lw(0.)
-ax.set_zticks([])
+
+#fig = plt.figure(1)
+#ax = fig.gca(projection='3d')
+#surf = ax.plot_surface(X, Y, np.real(np.reshape(psi[25],(len(x),len(y)))), cmap=cm.coolwarm, linewidth=0, antialiased=False)
+#ax.view_init(90, 90); # Top view
+#plt.xlabel("Position x")
+#plt.ylabel("Position y")
+#plt.title("Implicit method")
+#fig.colorbar(surf, shrink=0.5, aspect=5)
+## Hide z-axis
+#ax.w_zaxis.line.set_lw(0.)
+#ax.set_zticks([])
 #
-fig =plt.figure(2)
-ax = fig.gca(projection='3d')
-surf = ax.plot_surface(X, Y, np.real(np.reshape(psi2[25],(len(x),len(y)))), cmap=cm.coolwarm, linewidth=0, antialiased=False)
-ax.view_init(90, 90); # Top view
-plt.xlabel("Position x")
-plt.ylabel("Position y")
-plt.title("Crank")
-fig.colorbar(surf, shrink=0.5, aspect=5)
-# Hide z-axis
-ax.w_zaxis.line.set_lw(0.)
-ax.set_zticks([])
+#fig =plt.figure(2)
+#ax = fig.gca(projection='3d')
+#surf = ax.plot_surface(X, Y, np.real(np.reshape(psi2[25],(len(x),len(y)))), cmap=cm.coolwarm, linewidth=0, antialiased=False)
+#ax.view_init(90, 90); # Top view
+#plt.xlabel("Position x")
+#plt.ylabel("Position y")
+#plt.title("Crank")
+#fig.colorbar(surf, shrink=0.5, aspect=5)
+## Hide z-axis
+#ax.w_zaxis.line.set_lw(0.)
+#ax.set_zticks([])
 #
-fig =plt.figure(3)
+fig =plt.figure(1)
 ax = fig.gca(projection='3d')
 surf = ax.plot_surface(X, Y, np.real(np.reshape(psi0,(len(x),len(y)))), cmap=cm.coolwarm, linewidth=0, antialiased=False)
 ax.view_init(90, 90); # Top view
@@ -114,7 +116,7 @@ fig.colorbar(surf, shrink=0.5, aspect=5)
 ax.w_zaxis.line.set_lw(0.)
 ax.set_zticks([])
 #
-fig =plt.figure(4)
+fig =plt.figure(2)
 ax = fig.gca(projection='3d')
 surf = ax.plot_surface(X, Y, np.real(np.reshape(V,(len(x),len(y)))), cmap=cm.coolwarm, linewidth=0, antialiased=False)
 ax.view_init(90, 90); # Top view
@@ -125,3 +127,51 @@ fig.colorbar(surf, shrink=0.5, aspect=5)
 # Hide z-axis
 ax.w_zaxis.line.set_lw(0.)
 ax.set_zticks([])
+
+# Implicit
+plot_args = {'cmap':cm.coolwarm, 'linewidth':0, 'antialiased':False, 'vmin':-1, 'vmax':1}
+fig1 = plt.figure(3)
+ax1 = fig1.gca(projection='3d')
+ax1.view_init(90, 90); # Top view
+surf1 = ax1.plot_surface(X, Y, np.real(np.reshape(psi0,(len(x),len(y)))) , **plot_args  )
+fig1.colorbar(surf1, shrink=0.5, aspect=5)
+
+def update_3d1(num):
+    # Plot 1
+    ax1.clear()
+    surf1 = ax1.plot_surface(X, Y, np.real(np.reshape(psi[num],(len(x),len(y)))) , **plot_args  )
+    #
+    ax1.set_xlabel("Position X")
+    ax1.set_ylabel("Position Y")
+    ax1.set_title("Implicit: Time = %.3f" % t[num])
+    ax1.set_zlim(-1, 1)
+    # Hide z-axis
+    ax1.w_zaxis.line.set_lw(0.)
+    ax1.set_zticks([])
+    #
+    return surf1
+
+line_ani = animation.FuncAnimation(fig, update_3d1, frames=len(t), interval=100, blit=False)
+##
+fig2 = plt.figure(4)
+ax2 = fig2.gca(projection='3d')
+ax2.view_init(90, 90); # Top view
+surf2 = ax2.plot_surface(X, Y, np.real(np.reshape(psi0,(len(x),len(y)))) , **plot_args  )
+fig2.colorbar(surf2, shrink=0.5, aspect=5)
+
+def update_3d2(num):
+    # Plot 1
+    ax2.clear()
+    surf2 = ax2.plot_surface(X, Y, np.real(np.reshape(psi2[num],(len(x),len(y)))) , **plot_args  )
+    #
+    ax2.set_xlabel("Position X")
+    ax2.set_ylabel("Position Y")
+    ax2.set_title("Crank: Time = %.3f" % t[num])
+    ax2.set_zlim(-1, 1)
+    # Hide z-axis
+    ax2.w_zaxis.line.set_lw(0.)
+    ax2.set_zticks([])
+    #
+    return surf2
+
+line_ani2 = animation.FuncAnimation(fig, update_3d2, frames=len(t), interval=100, blit=False)
