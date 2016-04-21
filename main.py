@@ -5,7 +5,9 @@ from mpl_toolkits.mplot3d import Axes3D # Required for projection='3d'!
 from scipy.stats import norm
 import scipy
 from matplotlib import cm
+from matplotlib import animation
 import sys
+
 
 def calculateExplicit(x, t, dx, dt, psi, V):
     print("Calculating explicit method...",flush=True)
@@ -44,6 +46,7 @@ def calculateImplicit(x,t,dx,dt,psi,V):
     return psi
     
 def calculateCrank(x,t,dx,dt,psi,V):
+    print("Calculating Crank method...", flush=True)
     #Construct hamiltonian
     diagonals=[-2*np.ones(len(x)), np.ones(len(x)-1), np.ones(len(x)-1)] 
     H = -1/(2 * dx**2) * scipy.sparse.diags(diagonals, [0,1,-1], format="csc")
@@ -56,7 +59,8 @@ def calculateCrank(x,t,dx,dt,psi,V):
     #Compute next time step
     for k in range(0, len(t)-1):
         psi[k+1,:] = operatorInv.dot(psi[k,:])
-        
+    
+    print("Done", flush=True)    
     return psi
     
 
@@ -94,7 +98,7 @@ dx = .01;
 
 tmin = 0
 tmax = 25
-dt = 1
+dt = .01
 
 # Determine x and t range
 x = np.arange(xmin, xmax, dx)
@@ -196,6 +200,7 @@ surf = ax.plot_surface(X, T, np.real(psiCrank), rstride=10, cstride=10,cmap=cm.c
 ax.view_init(90, 90); # Top view
 plt.xlabel("Position")
 plt.ylabel("Time")
+plt.title("Crank method")
 fig.colorbar(surf, shrink=0.5, aspect=5)
 # Hide z-axis
 ax.w_zaxis.line.set_lw(0.)
@@ -223,3 +228,27 @@ plt.figure(6)
 plt.plot(x,psi0);
 plt.xlabel('Position')
 plt.ylabel("Initial Psi")
+
+# Anitmated plot of Psi
+global x, t, psiCrank
+fig = plt.figure()
+ax = plt.axes(xlim=(xmin,xmax), ylim=(np.min(np.real(psiCrank)),np.max(np.real(psiCrank))))
+line, = ax.plot([],[], lw=2)
+timestamp = ax.text(0.02, 0.95, '', transform=ax.transAxes)
+
+def init():
+    line.set_data([],[])
+    timestamp.set_text('')
+    return line, timestamp
+    
+def animate(i):
+    line.set_data(x, np.real(psiCrank[i,:]))
+    timestamp.set_text("Time = %.1f" % t[i] )
+    return line, timestamp
+    
+anim = animation.FuncAnimation(fig, animate, init_func=init, frames=len(t), interval=10, blit=True)
+
+plt.xlabel("Position")
+plt.ylabel("Wave function")
+plt.title("Animated Crank method wave function")
+plt.show()
