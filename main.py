@@ -5,6 +5,7 @@ from mpl_toolkits.mplot3d import Axes3D # Required for projection='3d'!
 from scipy.stats import norm
 import scipy
 from matplotlib import cm
+import sys
 
 def calculateExplicit(x, t, dx, dt, psi, V):
     print("Calculating explicit method...",flush=True)
@@ -93,7 +94,7 @@ dx = .01;
 
 tmin = 0
 tmax = 25
-dt = 0.005
+dt = 1
 
 # Determine x and t range
 x = np.arange(xmin, xmax, dx)
@@ -108,23 +109,46 @@ psi0[int(len(x)*1/3):int(len(x)*2/3)] = np.sin( x[int(len(x)*1/3):int(len(x)*2/3
 Norm=scipy.integrate.trapz(psi0**2,dx=dx)
 psi0*=1/(Norm**(1/2))
 
-# Define potential
-V = np.zeros(len(x))
-# Infite square well
-V[0:int(len(V)/3)] = 9223372036854775807
-V[int(len(V)*2/3):len(V)] = 9223372036854775807;
-# Wider Well
-#V[0:int(len(V)/4)] = 9223372036854775807; # Max int?
-#V[int(len(V)*3/4):len(V)] = 9223372036854775807;
+# Choose the potential
+def definePotential(choosePotential):
+    # Define potential
+    V = np.zeros(len(x))
+    error = 0;
+    
+    if (choosePotential == "ISW"):
+        # Infite square well
+        V[0:int(len(V)/3)] = 9223372036854775807
+        V[int(len(V)*2/3):len(V)] = 9223372036854775807;
+    elif (choosePotential == "WW"):
+        # Wider Well
+        V[0:int(len(V)/4)] = 9223372036854775807; # Max int?
+        V[int(len(V)*3/4):len(V)] = 9223372036854775807;
+    elif (choosePotential == "DAP"):
+        # Double aperture potential
+        a=0.3; #distance between apertures
+        d=0.1; #diameter of apertures
+        V[0:int((0.5-a/2-d/2)*len(V))] = 9223372036854775807
+        V[int((0.5-a/2+d/2)*len(V)):int((0.5+a/2-d/2)*len(V))]=9223372036854775807
+        V[int((0.5+a/2+d/2)*len(V)):-1]=9223372036854775807
+    else: 
+        error=1
+#        sys.exit("Unknown potential")
+#        quit()
+    
+    return V, error
 
-# Double aperture potential
-#a=0.3; #distance between apertures
-#d=0.1; #diameter of apertures
-#V[0:int((0.5-a/2-d/2)*len(V))] = 9223372036854775807
-#V[int((0.5-a/2+d/2)*len(V)):int((0.5+a/2-d/2)*len(V))]=9223372036854775807
-#V[int((0.5+a/2+d/2)*len(V)):-1]=9223372036854775807
+print("Choose one of the following potentials \n",
+      "ISW = Infinite Square Well \n",
+      "WW = Wider Well\n",
+      "DAP = Double aperture potential\n",
+      flush=True)
+choosePotential = input("Input:")
 
+V, error = definePotential(choosePotential)
 
+if error==1:
+    sys.exit("Unknown potential")
+    
 # Inititate psi
 psi = np.array(np.zeros([len(t),len(x)]), dtype=np.complex128)
 psi[0,:] = psi0
