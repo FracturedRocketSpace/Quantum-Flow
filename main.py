@@ -64,10 +64,13 @@ def calculateSuzuki(x, t, dx, dt, psi, V):
     
     exp1 = scipy.linalg.expm(-1j*dt/2 * np.diag(V,0));
 
+    p = np.fft.fftfreq(len(x)) * len(x); # I would have expected dp here. But then it oscilates much more slowly than other method
+    
     L = (max(x)-min(x))
-    dp = 1/L;
-    #p = np.linspace(-len(x)/2*dp, +len(x)/2*dp - dp, len(x) ) # FFT has zero frequency in first index
-    p = np.fft.fftfreq(len(x)) * len(x) * dp;
+    dp = 2*np.pi/L;    
+    #temp = np.fft.ifftshift(np.linspace(-len(x)/2,len(x)/2,len(x)))
+    #p = temp * dp;
+    
     p = np.diag(p,0)
     exp2 = scipy.linalg.expm(-1j*dt/2 * p**2)
 
