@@ -113,7 +113,7 @@ psi0*=1/(Norm**(1/2))
 def definePotential(choosePotential):
     # Define potential
     V = np.zeros(len(x))
-    error = 0;
+    error = False;
     
     if (choosePotential == "ISW"):
         # Infite square well
@@ -131,12 +131,11 @@ def definePotential(choosePotential):
         V[int((0.5-a/2+d/2)*len(V)):int((0.5+a/2-d/2)*len(V))]=9223372036854775807
         V[int((0.5+a/2+d/2)*len(V)):-1]=9223372036854775807
     else: 
-        error=1
-#        sys.exit("Unknown potential")
-#        quit()
-    
+        error=True
+        
     return V, error
 
+# Prompt user for potential
 print("Choose one of the following potentials \n",
       "ISW = Infinite Square Well \n",
       "WW = Wider Well\n",
@@ -146,7 +145,7 @@ choosePotential = input("Input:")
 
 V, error = definePotential(choosePotential)
 
-if error==1:
+if error:
     sys.exit("Unknown potential")
     
 # Inititate psi
