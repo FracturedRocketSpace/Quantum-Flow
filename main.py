@@ -41,12 +41,16 @@ def calculateImplicit(x,t,dx,dt,psi,V):
     H2 = 1j/dt*scipy.sparse.identity(len(x), format="csc") - H
     
     #Invert hamiltonian    
-    H2Inv=scipy.sparse.linalg.inv(H2)    
+    #H2Inv=scipy.sparse.linalg.inv(H2)    
+    
+    #LU factorization of Hamiltonian
+    factors = scipy.sparse.linalg.factorized(H2)    
     
     #Compute next time step
     for k in range(0, len(t)-1):
-        psi[k+1,:] = H2Inv.dot(1j/dt*psi[k,:])
-    
+        #psi[k+1,:] = H2Inv.dot(1j/dt*psi[k,:])
+        psi[k+1,:] = factors(1j/dt*psi[k,:])
+            
     print("Done",flush=True)  
     return psi
     
@@ -62,7 +66,7 @@ def calculateCrank(x,t,dx,dt,psi,V):
     H[-1,0] = -1/(2 * dx**2)
     
     inverseDenominator = scipy.sparse.linalg.inv(scipy.sparse.identity(len(x), format="csc")+1j*dt*H/2)
-    operator = (scipy.sparse.identity(len(x), format="csc")-1j*dt*H/2).dot(inverseDenominator)
+    operator = (scipy.sparse.identity(len(x), format="csc")-1j*dt*H/2).dot(inverseDenominator)    
     
     #Compute next time step
     for k in range(0, len(t)-1):
@@ -206,6 +210,7 @@ fig.colorbar(surf, shrink=0.5, aspect=5)
 # Hide z-axis
 ax.w_zaxis.line.set_lw(0.)
 ax.set_zticks([])
+    
 
 fig = plt.figure(3)
 ax = fig.gca(projection='3d')
