@@ -17,8 +17,8 @@ ymax = 2*math.pi;
 dy = 0.05;
 
 tmin = 0
-tmax = 0.005
-dt = 0.0001
+tmax = 0.05
+dt = 0.0002
 
 # Determine x and t range
 x = np.arange(xmin, xmax, dx)
@@ -70,43 +70,19 @@ OpCrank = Op1.dot(scipy.sparse.linalg.inv(Op2))
 ## Invert
 print('Inverting')
 OpInv = scipy.sparse.linalg.inv(Op);
-OpCrankInv = scipy.sparse.linalg.inv(OpCrank);
 
 #Compute next time step
 print('Starting loop')
 for k in range(0, len(t)-1):
     psi[k+1,:] = OpInv.dot(psi[k,:])
-    psi2[k+1,:] = OpCrankInv.dot(psi2[k,:])
+    psi2[k+1,:] = OpCrank.dot(psi2[k,:])
 
 # Plot
 
-#fig = plt.figure(1)
-#ax = fig.gca(projection='3d')
-#surf = ax.plot_surface(X, Y, np.real(np.reshape(psi[25],(len(x),len(y)))), cmap=cm.coolwarm, linewidth=0, antialiased=False)
-#ax.view_init(90, 90); # Top view
-#plt.xlabel("Position x")
-#plt.ylabel("Position y")
-#plt.title("Implicit method")
-#fig.colorbar(surf, shrink=0.5, aspect=5)
-## Hide z-axis
-#ax.w_zaxis.line.set_lw(0.)
-#ax.set_zticks([])
-#
-#fig =plt.figure(2)
-#ax = fig.gca(projection='3d')
-#surf = ax.plot_surface(X, Y, np.real(np.reshape(psi2[25],(len(x),len(y)))), cmap=cm.coolwarm, linewidth=0, antialiased=False)
-#ax.view_init(90, 90); # Top view
-#plt.xlabel("Position x")
-#plt.ylabel("Position y")
-#plt.title("Crank")
-#fig.colorbar(surf, shrink=0.5, aspect=5)
-## Hide z-axis
-#ax.w_zaxis.line.set_lw(0.)
-#ax.set_zticks([])
 #
 fig =plt.figure(1)
 ax = fig.gca(projection='3d')
-surf = ax.plot_surface(X, Y, np.real(np.reshape(psi0,(len(x),len(y)))), cmap=cm.coolwarm, linewidth=0, antialiased=False)
+surf = ax.plot_surface(X, Y, np.real(np.reshape(psi0,(len(y),len(x)), order='F' )), cmap=cm.coolwarm, linewidth=0, antialiased=False)
 ax.view_init(90, 90); # Top view
 plt.xlabel("Position x")
 plt.ylabel("Position y")
@@ -118,7 +94,7 @@ ax.set_zticks([])
 #
 fig =plt.figure(2)
 ax = fig.gca(projection='3d')
-surf = ax.plot_surface(X, Y, np.real(np.reshape(V,(len(x),len(y)))), cmap=cm.coolwarm, linewidth=0, antialiased=False)
+surf = ax.plot_surface(X, Y, np.real(np.reshape(V,(len(y),len(x)), order='F')), cmap=cm.coolwarm, linewidth=0, antialiased=False)
 ax.view_init(90, 90); # Top view
 plt.xlabel("Position x")
 plt.ylabel("Position y")
@@ -128,26 +104,29 @@ fig.colorbar(surf, shrink=0.5, aspect=5)
 ax.w_zaxis.line.set_lw(0.)
 ax.set_zticks([])
 
-# Implicit
+# Plot
+sync_num = np.zeros(2);
+#
 plot_args = {'cmap':cm.coolwarm, 'linewidth':0, 'antialiased':False, 'vmin':-1, 'vmax':1}
 fig1 = plt.figure(3)
 ax1 = fig1.gca(projection='3d')
 ax1.view_init(90, 90); # Top view
-surf1 = ax1.plot_surface(X, Y, np.real(np.reshape(psi0,(len(x),len(y)))) , **plot_args  )
+surf1 = ax1.plot_surface(X, Y, np.real(np.reshape(psi0,(len(y),len(x)), order='F')) , **plot_args  )
 fig1.colorbar(surf1, shrink=0.5, aspect=5)
 
 def update_3d1(num):
     # Plot 1
     ax1.clear()
-    surf1 = ax1.plot_surface(X, Y, np.real(np.reshape(psi[num],(len(x),len(y)))) , **plot_args  )
+    surf1 = ax1.plot_surface(X, Y, np.real(np.reshape(psi[num],(len(y),len(x)), order='F')) , **plot_args  )
     #
     ax1.set_xlabel("Position X")
     ax1.set_ylabel("Position Y")
-    ax1.set_title("Implicit: Time = %.3f" % t[num])
+    ax1.set_title("Implicit: Time = %.4f" % t[num])
     ax1.set_zlim(-1, 1)
     # Hide z-axis
     ax1.w_zaxis.line.set_lw(0.)
     ax1.set_zticks([])
+    sync_num[0]=num;
     #
     return surf1
 
@@ -156,17 +135,18 @@ line_ani = animation.FuncAnimation(fig, update_3d1, frames=len(t), interval=100,
 fig2 = plt.figure(4)
 ax2 = fig2.gca(projection='3d')
 ax2.view_init(90, 90); # Top view
-surf2 = ax2.plot_surface(X, Y, np.real(np.reshape(psi0,(len(x),len(y)))) , **plot_args  )
+surf2 = ax2.plot_surface(X, Y, np.real(np.reshape(psi0,(len(y),len(x)), order='F')) , **plot_args  )
 fig2.colorbar(surf2, shrink=0.5, aspect=5)
 
 def update_3d2(num):
+    num=sync_num[0];
     # Plot 1
     ax2.clear()
-    surf2 = ax2.plot_surface(X, Y, np.real(np.reshape(psi2[num],(len(x),len(y)))) , **plot_args  )
+    surf2 = ax2.plot_surface(X, Y, np.real(np.reshape(psi2[num],(len(y),len(x)), order='F')) , **plot_args  )
     #
     ax2.set_xlabel("Position X")
     ax2.set_ylabel("Position Y")
-    ax2.set_title("Crank: Time = %.3f" % t[num])
+    ax2.set_title("Crank: Time = %.4f" % t[num])
     ax2.set_zlim(-1, 1)
     # Hide z-axis
     ax2.w_zaxis.line.set_lw(0.)
