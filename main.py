@@ -27,6 +27,11 @@ def calculateImplicit(x,t,dx,dt,psi,V):
     diagonals=[-2*np.ones(len(x)), np.ones(len(x)-1), np.ones(len(x)-1)] 
     H = -1/(2 * dx**2) * scipy.sparse.diags(diagonals, [0,1,-1], format="csc")
     H += scipy.sparse.diags(V,0,format="csc")    
+    
+    # Periodic boundary condition
+    H[0,-1] = -1/(2 * dx**2)
+    H[-1,0] = -1/(2 * dx**2)    
+    
     H2 = 1j/dt*scipy.sparse.identity(len(x), format="csc") - H
     
     #Invert hamiltonian    
@@ -43,14 +48,17 @@ def calculateCrank(x,t,dx,dt,psi,V):
     diagonals=[-2*np.ones(len(x)), np.ones(len(x)-1), np.ones(len(x)-1)] 
     H = -1/(2 * dx**2) * scipy.sparse.diags(diagonals, [0,1,-1], format="csc")
     H += scipy.sparse.diags(V,0,format="csc")    
+    
+    # Periodic boundary condition
+    H[0,-1] = -1/(2 * dx**2)
+    H[-1,0] = -1/(2 * dx**2)
+    
     inverseDenominator = scipy.sparse.linalg.inv(scipy.sparse.identity(len(x), format="csc")+1j*dt*H/2)
     operator = (scipy.sparse.identity(len(x), format="csc")-1j*dt*H/2).dot(inverseDenominator)
     
-    operatorInv = scipy.sparse.linalg.inv(operator)
-
     #Compute next time step
     for k in range(0, len(t)-1):
-        psi[k+1,:] = operatorInv.dot(psi[k,:])
+        psi[k+1,:] = operator.dot(psi[k,:])
         
     return psi
     
@@ -81,8 +89,8 @@ xmax = 3*math.pi;
 dx = .01;
 
 tmin = 0
-tmax = 25
-dt = 0.005
+tmax = 0.5
+dt = 0.0001
 
 # Determine x and t range
 x = np.arange(xmin, xmax, dx)
@@ -91,8 +99,10 @@ t = np.arange(tmin, tmax, dt)
 X, T =np.meshgrid(x,t)
 
 # Define psi at t=0
-psi0 = np.zeros(len(x));
-psi0[int(len(x)*1/3):int(len(x)*2/3)] = np.sin( x[int(len(x)*1/3):int(len(x)*2/3)] - math.pi   )
+packetWidthSqr = 1/16
+packetCenter = 3/8*xmax
+k = 40
+psi0 = np.exp(-(x-packetCenter)**2/(2*packetWidthSqr)+1j*k*x)
 #Normalize psi
 Norm=scipy.integrate.trapz(psi0**2,dx=dx)
 psi0*=1/(Norm**(1/2))
@@ -100,8 +110,9 @@ psi0*=1/(Norm**(1/2))
 # Define potential
 V = np.zeros(len(x))
 # Infite square well
-V[0:int(len(V)/3)] = 9223372036854775807
-V[int(len(V)*2/3):len(V)] = 9223372036854775807;
+#V[0:int(len(V)/8)] = 9223372036854775807
+V[int(len(V)*5/8):int(len(V)*6/8)] = 151
+#V[int(len(V)*7/8):len(V)] = 9223372036854775807;
 # Wider Well
 #V[0:int(len(V)/4)] = 9223372036854775807; # Max int?
 #V[int(len(V)*3/4):len(V)] = 9223372036854775807;
@@ -146,7 +157,7 @@ psiCrank = calculateCrank(x, t, dx, dt, np.copy(psi), V);
 
 fig = plt.figure(2)
 ax = fig.gca(projection='3d')
-surf = ax.plot_surface(X, T, np.real(psiImplicit), rstride=10, cstride=10,cmap=cm.coolwarm, linewidth=0, antialiased=False)
+surf = ax.plot_surface(X, T, np.absolute(psiImplicit), rstride=10, cstride=10,cmap=cm.coolwarm, linewidth=0, antialiased=False)
 ax.view_init(90, 90); # Top view
 plt.xlabel("Position")
 plt.ylabel("Time")
@@ -157,7 +168,7 @@ ax.set_zticks([])
 
 fig = plt.figure(3)
 ax = fig.gca(projection='3d')
-surf = ax.plot_surface(X, T, np.real(psiCrank), rstride=10, cstride=10,cmap=cm.coolwarm, linewidth=0, antialiased=False)
+surf = ax.plot_surface(X, T, np.absolute(psiCrank), rstride=10, cstride=10,cmap=cm.coolwarm, linewidth=0, antialiased=False)
 ax.view_init(90, 90); # Top view
 plt.xlabel("Position")
 plt.ylabel("Time")
@@ -168,7 +179,7 @@ ax.set_zticks([])
 
 fig = plt.figure(4)
 ax = fig.gca(projection='3d')
-surf = ax.plot_surface(X, T, np.real(psiGyros), rstride=10, cstride=10,cmap=cm.coolwarm, linewidth=0, antialiased=False)
+surf = ax.plot_surface(X, T, np.absolute(psiGyros), rstride=10, cstride=10,cmap=cm.coolwarm, linewidth=0, antialiased=False)
 ax.view_init(90, 90); # Top view
 plt.xlabel("Position")
 plt.ylabel("Time")
@@ -176,7 +187,6 @@ fig.colorbar(surf, shrink=0.5, aspect=5)
 # Hide z-axis
 ax.w_zaxis.line.set_lw(0.)
 ax.set_zticks([])
-
 
 plt.figure(5)
 plt.plot(x,V);
@@ -187,3 +197,10 @@ plt.figure(6)
 plt.plot(x,psi0);
 plt.xlabel('Position')
 plt.ylabel("Initial Psi")
+
+numPlots = 15;
+for p in range(numPlots):
+    plt.figure(7+p);
+    plt.plot(x,np.absolute(psiCrank[int(p/numPlots*len(t)/5),:]));
+    plt.xlabel('Position')
+    plt.ylabel("Psi at t = " + str(t[int(p/numPlots*len(t)/5)]))
