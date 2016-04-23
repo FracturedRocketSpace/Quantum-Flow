@@ -11,18 +11,20 @@ import sys
 
 def calculateExplicit(x, t, dx, dt, psi, V):
     print("Calculating explicit method...",flush=True)
-    # Construct hamiltonian
-    H = -1/(2 * dx**2) * (-2*np.diag(np.ones(len(x)), 0) + np.diag(np.ones(len(x)-1), 1) + np.diag(np.ones(len(x)-1), -1))
+    #Construct hamiltonian
+    diagonals=[-2*np.ones(len(x)), np.ones(len(x)-1), np.ones(len(x)-1)]
+    H = -1/(2 * dx**2) * scipy.sparse.diags(diagonals, [0,1,-1], format="csc")
+    H += scipy.sparse.diags(V,0,format="csc")
+
     # Periodic boundary condition
     H[0,-1] = -1/(2 * dx**2)
     H[-1,0] = -1/(2 * dx**2)
-    
-    # Add potential
-    H += np.diag(V,0)
+
+    H2 = scipy.sparse.identity(len(x), format="csc") - 1j*dt*H/2
 
     for k in range(0, len(t)-1):
         # Compute next time step
-        psi[k+1,:] = psi[k,:] + dt/(1j) * np.dot(H,psi[k,:])
+        psi[k+1,:] =  H2.dot(psi[k,:])
         #Normalize new psi        
         Norm=scipy.integrate.trapz(np.absolute(psi[k+1,:])**2,dx=dx)
         psi[k+1,:]*=1/(Norm**(1/2))
@@ -40,20 +42,14 @@ def calculateImplicit(x,t,dx,dt,psi,V):
     # Periodic boundary condition
     H[0,-1] = -1/(2 * dx**2)
     H[-1,0] = -1/(2 * dx**2)    
-    
-    #H2 = 1j/dt*scipy.sparse.identity(len(x), format="csc") - H
-    H2 = scipy.sparse.identity(len(x),format="csc") + 1j*dt*H/2    
-    
-    #Invert hamiltonian    
-    #H2Inv=scipy.sparse.linalg.inv(H2)    
+
+    H2 = scipy.sparse.identity(len(x),format="csc") + 1j*dt*H;
     
     #LU factorization of Hamiltonian
     factors = scipy.sparse.linalg.factorized(H2)
 
     #Compute next time step
     for k in range(0, len(t)-1):
-        #psi[k+1,:] = H2Inv.dot(1j/dt*psi[k,:])
-        #psi[k+1,:] = factors(1j/dt*psi[k,:])
         psi[k+1,:] = factors(psi[k,:])
         #Normalize new psi        
         Norm=scipy.integrate.trapz(np.absolute(psi[k+1,:])**2,dx=dx)
@@ -78,17 +74,10 @@ def calculateCrank(x,t,dx,dt,psi,V):
     
     #LU Factorization
     factors = scipy.sparse.linalg.factorized(H3)
-    #inverseDenominator = factors(np.identity(len(x)))    
-    #operator = H2.dot(inverseDenominator)    
-    
-    #Hamiltonian inversion
-    #inverseDenominator = scipy.sparse.linalg.inv(scipy.sparse.identity(len(x), format="csc")+1j*dt*H/2)
-    #operator = (scipy.sparse.identity(len(x), format="csc")-1j*dt*H/2).dot(inverseDenominator)    
     
     #Compute next time step
     for k in range(0, len(t)-1):
         psi[k+1,:] = factors(H2.dot(psi[k,:]))
-        #psi[k+1,:] = operator.dot(psi[k,:])
    
     print("Done", flush=True)    
     
@@ -186,7 +175,7 @@ psi = np.array(np.zeros([len(t),len(x)]), dtype=np.complex128)
 psi[0,:] = psi0
 
 # Explicit method
-#psiExplicit = calculateExplicit(x, t, dx, dt, np.copy(psi), V);
+psiExplicit = calculateExplicit(x, t, dx, dt, np.copy(psi), V);
 
 #Implicit mehod
 psiImplicit = calculateImplicit(x, t, dx, dt, np.copy(psi), V)
@@ -198,18 +187,17 @@ psiGyros = calculateSuzuki(x, t, dx, dt, np.copy(psi), V);
 psiCrank = calculateCrank(x, t, dx, dt, np.copy(psi), V);
 
 # Plot results
-#fig = plt.figure(1)
-#ax = fig.gca(projection='3d')
-#wire=ax.plot_wireframe(X,T,np.real(psiExplicit),rstride=1, cstride=1)
-#plt.xlabel("Position")
-#plt.ylabel("Time")
-
-
-#fig = plt.figure(2)
-#ax = fig.gca(projection='3d')
-#wire=ax.plot_wireframe(X,T,np.real(psiGyros),rstride=1, cstride=1)
-#plt.xlabel("Position")
-#plt.ylabel("Time")
+fig = plt.figure(1)
+ax = fig.gca(projection='3d')
+surf = ax.plot_surface(X, T, np.absolute(psiExplicit), rstride=10, cstride=10,cmap=cm.coolwarm, linewidth=0, antialiased=False)
+ax.view_init(90, 90); # Top view
+plt.xlabel("Position")
+plt.ylabel("Time")
+plt.title("Implicit method")
+fig.colorbar(surf, shrink=0.5, aspect=5)
+# Hide z-axis
+ax.w_zaxis.line.set_lw(0.)
+ax.set_zticks([])
 
 fig = plt.figure(2)
 ax = fig.gca(projection='3d')
