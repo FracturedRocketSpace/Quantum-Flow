@@ -244,6 +244,8 @@ plt.ylabel("Initial Psi")
 fig = plt.figure()
 ax = plt.axes(xlim=(xmin,xmax), ylim=(np.min(np.real(psiCrank)),np.max(np.real(psiCrank))))
 line, = ax.plot([],[], lw=2)
+axPot = ax.twinx()
+pot = axPot.plot([],[], lw=1)
 timestamp = ax.text(0.02, 0.95, '', transform=ax.transAxes)
 
 
@@ -254,7 +256,10 @@ def animate(i):
 
 anim = animation.FuncAnimation(fig, animate, frames=len(t), interval=10, blit=True)
 
-plt.xlabel("Position")
-plt.ylabel("Wave function")
+axPot.plot(x, V, 'r')
+
+ax.set_xlabel("Position")
+ax.set_ylabel("Wave function", color='b')
+axPot.set_ylabel("Potential", color='r')
 plt.title("Animated Crank method wave function")
 plt.show()
