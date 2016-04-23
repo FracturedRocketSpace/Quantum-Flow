@@ -65,12 +65,19 @@ def calculateCrank(x,t,dx,dt,psi,V):
     H[0,-1] = -1/(2 * dx**2)
     H[-1,0] = -1/(2 * dx**2)
     
-    inverseDenominator = scipy.sparse.linalg.inv(scipy.sparse.identity(len(x), format="csc")+1j*dt*H/2)
-    operator = (scipy.sparse.identity(len(x), format="csc")-1j*dt*H/2).dot(inverseDenominator)    
+    H2 = 1j/dt*scipy.sparse.identity(len(x), format="csc") - H/2
+    H3 = 1j/dt*scipy.sparse.identity(len(x), format="csc") + H/2
+    
+    #LU Factorization
+    factors = scipy.sparse.linalg.factorized(H2)    
+    
+    #inverseDenominator = scipy.sparse.linalg.inv(scipy.sparse.identity(len(x), format="csc")+1j*dt*H/2)
+    #operator = (scipy.sparse.identity(len(x), format="csc")-1j*dt*H/2).dot(inverseDenominator)    
     
     #Compute next time step
     for k in range(0, len(t)-1):
-        psi[k+1,:] = operator.dot(psi[k,:])
+        #psi[k+1,:] = operator.dot(psi[k,:])
+        psi[k+1,:] = factors(H3.dot(psi[k,:]))
    
     print("Done", flush=True)    
     
@@ -104,7 +111,7 @@ dx = .01;
 
 tmin = 0
 tmax = 0.5
-dt = 0.0001
+dt =  0.0001
 
 # Determine x and t range
 x = np.arange(xmin, xmax, dx)
