@@ -77,28 +77,22 @@ def calculateCrank(x,t,dx,dt,psi,V):
     return psi
     
 def calculateSuzuki(x, t, dx, dt, psi, V):
-    print("Calculating FT method...",flush=True)    
-    
-    exp1 = scipy.linalg.expm(-1j*dt/2 * np.diag(V,0));
+    print("Calculating FT method...",flush=True)
+    # Calculate momenta
+    # Can someone find why this is approximately correct?
+    p = 2/3 * np.fft.fftfreq(len(x)) * len(x); # I would have expected dp here. But then it oscilates much more slowly than other method
 
-    p = np.fft.fftfreq(len(x)) * len(x); # I would have expected dp here. But then it oscilates much more slowly than other method
-    
-    L = (max(x)-min(x))
-    dp = 2*np.pi/L;    
-    #temp = np.fft.ifftshift(np.linspace(-len(x)/2,len(x)/2,len(x)))
-    #p = temp * dp;
-    
-    p = np.diag(p,0)
-    exp2 = scipy.linalg.expm(-1j*dt/2 * p**2)
+    # Calculate exponents
+    exp1 = scipy.sparse.diags(np.exp(-1j*dt/2*V),0,format="csc")
+    exp2 = scipy.sparse.diags(np.exp(-1j*dt/2* (p)**2 ),0,format="csc")
 
     for k in range(1, len(t)):
-        t1 = np.dot(exp1, psi[k-1,:]);
+        t1 =exp1.dot(psi[k-1])
         t2 = np.fft.fft(t1);
-        t3 = np.dot(exp2, t2);
+        t3 = exp2.dot(t2);
         t4 = np.fft.ifft(t3);
-        psi[k,:] = np.dot(exp1, t4);
-        #print(sum(psi[k,:]))
-    
+        psi[k,:] = exp1.dot(t4)
+
     print("Done",flush=True)
     return psi
         
@@ -247,23 +241,18 @@ plt.xlabel('Position')
 plt.ylabel("Initial Psi")
 
 # Anitmated plot of Psi
-global x, t, psiCrank
 fig = plt.figure()
 ax = plt.axes(xlim=(xmin,xmax), ylim=(np.min(np.real(psiCrank)),np.max(np.real(psiCrank))))
 line, = ax.plot([],[], lw=2)
 timestamp = ax.text(0.02, 0.95, '', transform=ax.transAxes)
 
-def init():
-    line.set_data([],[])
-    timestamp.set_text('')
-    return line, timestamp
-    
+
 def animate(i):
     line.set_data(x, np.absolute(psiCrank[i,:]))
-    timestamp.set_text("Time = %.1f" % t[i] )
+    timestamp.set_text("Time = %.3f" % t[i] )
     return line, timestamp
-    
-anim = animation.FuncAnimation(fig, animate, init_func=init, frames=len(t), interval=10, blit=True)
+
+anim = animation.FuncAnimation(fig, animate, frames=len(t), interval=10, blit=True)
 
 plt.xlabel("Position")
 plt.ylabel("Wave function")
