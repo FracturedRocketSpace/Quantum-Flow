@@ -23,6 +23,9 @@ def calculateExplicit(x, t, dx, dt, psi, V):
     for k in range(0, len(t)-1):
         # Compute next time step
         psi[k+1,:] = psi[k,:] + dt/(1j) * np.dot(H,psi[k,:])
+        #Normalize new psi        
+        Norm=scipy.integrate.trapz(np.absolute(psi[k+1,:])**2,dx=dx)
+        psi[k+1,:]*=1/(Norm**(1/2))
     
     print("Done",flush=True)
     return psi   
@@ -38,19 +41,24 @@ def calculateImplicit(x,t,dx,dt,psi,V):
     H[0,-1] = -1/(2 * dx**2)
     H[-1,0] = -1/(2 * dx**2)    
     
-    H2 = 1j/dt*scipy.sparse.identity(len(x), format="csc") - H
+    #H2 = 1j/dt*scipy.sparse.identity(len(x), format="csc") - H
+    H2 = scipy.sparse.identity(len(x),format="csc") + 1j*dt*H/2    
     
     #Invert hamiltonian    
     #H2Inv=scipy.sparse.linalg.inv(H2)    
     
     #LU factorization of Hamiltonian
-    factors = scipy.sparse.linalg.factorized(H2)    
-    
+    factors = scipy.sparse.linalg.factorized(H2)
+
     #Compute next time step
     for k in range(0, len(t)-1):
         #psi[k+1,:] = H2Inv.dot(1j/dt*psi[k,:])
-        psi[k+1,:] = factors(1j/dt*psi[k,:])
-            
+        #psi[k+1,:] = factors(1j/dt*psi[k,:])
+        psi[k+1,:] = factors(psi[k,:])
+        #Normalize new psi        
+        Norm=scipy.integrate.trapz(np.absolute(psi[k+1,:])**2,dx=dx)
+        psi[k+1,:]*=1/(Norm**(1/2))
+        
     print("Done",flush=True)  
     return psi
     
@@ -65,19 +73,22 @@ def calculateCrank(x,t,dx,dt,psi,V):
     H[0,-1] = -1/(2 * dx**2)
     H[-1,0] = -1/(2 * dx**2)
     
-    H2 = 1j/dt*scipy.sparse.identity(len(x), format="csc") - H/2
-    H3 = 1j/dt*scipy.sparse.identity(len(x), format="csc") + H/2
+    H2 = scipy.sparse.identity(len(x), format="csc") - 1j*dt*H/2
+    H3 = scipy.sparse.identity(len(x), format="csc") + 1j*dt*H/2
     
     #LU Factorization
-    factors = scipy.sparse.linalg.factorized(H2)    
+    factors = scipy.sparse.linalg.factorized(H3)
+    #inverseDenominator = factors(np.identity(len(x)))    
+    #operator = H2.dot(inverseDenominator)    
     
+    #Hamiltonian inversion
     #inverseDenominator = scipy.sparse.linalg.inv(scipy.sparse.identity(len(x), format="csc")+1j*dt*H/2)
     #operator = (scipy.sparse.identity(len(x), format="csc")-1j*dt*H/2).dot(inverseDenominator)    
     
     #Compute next time step
     for k in range(0, len(t)-1):
+        psi[k+1,:] = factors(H2.dot(psi[k,:]))
         #psi[k+1,:] = operator.dot(psi[k,:])
-        psi[k+1,:] = factors(H3.dot(psi[k,:]))
    
     print("Done", flush=True)    
     
@@ -125,7 +136,7 @@ packetCenter = 3/8*xmax
 k = 40
 psi0 = np.exp(-(x-packetCenter)**2/(2*packetWidthSqr)+1j*k*x)
 #Normalize psi
-Norm=scipy.integrate.trapz(psi0**2,dx=dx)
+Norm=scipy.integrate.trapz(np.absolute(psi0)**2,dx=dx)
 psi0*=1/(Norm**(1/2))
 
 # Choose the potential
