@@ -252,10 +252,10 @@ plt.plot(x,np.real(psi0));
 plt.xlabel('Position')
 plt.ylabel("Real part of Initial Psi")
 
-plt.figure(6)
+plt.figure(7)
 plt.plot(x,np.absolute(psi0));
 plt.xlabel('Position')
-plt.ylabel("Initial Psi")
+plt.ylabel("Absolute Initial Psi")
 
 # Anitmated plot of Psi
 fig = plt.figure()
