@@ -35,14 +35,14 @@ def setup(choosePreset):
     V = np.zeros((len(x),len(y)));
     error = False;
     
-    # Define psi at t=0
+    # Define psi at t=0, gaussian wave packet moving in the x direction
     psi0 = np.array(np.zeros((len(x),len(y))), dtype=np.complex128)
+
     packetWidthSqr = 1/8;
     packetCenter = xmax*3/8
     k = 4000
     for i in range(len(y)):
-        psi0[:,i] = np.exp(-(x-packetCenter)**2/(2*packetWidthSqr) - 1j*k*x)# * np.sin(y[i]/2)**2
-    
+        psi0[:,i] = np.exp(-(x-packetCenter)**2/(2*packetWidthSqr) - 1j*k*x)
     
     if (choosePreset == "BAR"):
         # Barrier
@@ -90,7 +90,6 @@ if error:
 # Reshape to required format
 V = np.squeeze(np.reshape(V,len(x)*len(y), order='F'))
 
-
 #   Normalize psi
 
 # Reshape back
@@ -128,9 +127,7 @@ for k in range(0, len(t)-1):
     psi2[k+1,:] = Op2Factors(Op1.dot(psi2[k,:]))
 
 
-# Plot
-
-#
+#Plot results
 fig =plt.figure(1)
 ax = fig.gca(projection='3d')
 surf = ax.plot_surface(X, Y, np.absolute(np.reshape(psi0,(len(y),len(x)))), cmap=cm.coolwarm, linewidth=0, antialiased=False)
@@ -155,10 +152,10 @@ fig.colorbar(surf, shrink=0.5, aspect=5)
 ax.w_zaxis.line.set_lw(0.)
 ax.set_zticks([])
 
-# Plot
 sync_num = np.zeros(2);
-#
 plot_args = {'cmap':cm.coolwarm, 'linewidth':0, 'antialiased':False, 'vmin':-1, 'vmax':1}
+
+#Implicit animation
 fig1 = plt.figure(3)
 ax1 = fig1.gca(projection='3d')
 ax1.view_init(90, 90); # Top view
@@ -182,7 +179,8 @@ def update_3d1(num):
     return surf1
 
 line_ani = animation.FuncAnimation(fig, update_3d1, frames=len(t), interval=100, blit=False)
-##
+
+#Crank animation
 fig2 = plt.figure(4)
 ax2 = fig2.gca(projection='3d')
 ax2.view_init(90, 90); # Top view
