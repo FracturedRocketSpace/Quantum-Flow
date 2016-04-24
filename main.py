@@ -119,14 +119,39 @@ t = np.arange(tmin, tmax, dt)
 
 X, T =np.meshgrid(x,t)
 
-# Define psi at t=0, gaussian wave packets
-packetWidthSqr = 1/16
-packetCenter = 3/8*xmax
-k = 40
-psi0 = np.exp(-(x-packetCenter)**2/(2*packetWidthSqr)+1j*k*x)
-#Normalize psi
-Norm=scipy.integrate.trapz(np.absolute(psi0)**2,dx=dx)
-psi0*=1/(Norm**(1/2))
+def normalizePsi(psi0):
+    Norm=scipy.integrate.trapz(np.absolute(psi0)**2,dx=dx)
+    normPsi0=psi0/(Norm**(1/2))
+    return normPsi0
+
+def definePsi0(choosePsi0):
+    
+    error = False;
+    
+    #Define psi at t=0
+    if(choosePsi0 == "PAC"):
+        #gaussian wave packet
+        packetWidthSqr = 1/16
+        packetCenter = 3/8*xmax
+        k = 40
+        psi0 = np.exp(-(x-packetCenter)**2/(2*packetWidthSqr)+1j*k*x)
+        normalizePsi(psi0)
+    elif(choosePsi0 == "SIN"):
+        psi0 = np.zeros(len(x));
+        psi0[int(len(x)*1/3):int(len(x)*2/3)] = np.sin(x[int(len(x)*1/3):int(len(x)*2/3)] - math.pi)
+        normalizePsi(psi0)
+    else:
+        error = True;    
+    return psi0, error
+
+# Prompt user for psi0
+print("Choose one of the following initial psi \n",
+      "PAC = Gaussian Wave Packet \n",
+      "SIN = Sine wave\n",
+      flush=True)
+choosePsi0 = input("Input:")
+
+psi0, error = definePsi0(choosePsi0)
 
 # Choose the potential
 def definePotential(choosePotential):
