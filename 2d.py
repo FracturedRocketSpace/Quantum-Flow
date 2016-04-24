@@ -6,6 +6,7 @@ from scipy.stats import norm
 from matplotlib import animation
 import scipy
 from matplotlib import cm
+import sys
 
 # Define input parameters
 xmin = 0;
@@ -29,20 +30,67 @@ X, Y =np.meshgrid(x,y)
 
 print('Init Psy and potential')
 # Define V
-V = np.zeros((len(x),len(y)));
-for i in range(len(y)):
-    V[int(len(V)*5/8):int(len(V)*6/8),i] = 150
+def setup(choosePreset):
+    # Initiate potential and error
+    V = np.zeros((len(x),len(y)));
+    error = False;
+    
+    # Define psi at t=0
+    psi0 = np.array(np.zeros((len(x),len(y))), dtype=np.complex128)
+    packetWidthSqr = 1/8;
+    packetCenter = xmax*3/8
+    k = 4000
+    for i in range(len(y)):
+        psi0[:,i] = np.exp(-(x-packetCenter)**2/(2*packetWidthSqr) - 1j*k*x)# * np.sin(y[i]/2)**2
+    
+    
+    if (choosePreset == "BAR"):
+        # Barrier
+        V[int(len(V)*5/8):int(len(V)*6/8),::] = 150
+    elif (choosePreset == "DS"):
+        # Double aperture potential
+        a=2; #distance between apertures
+        d=0.5; #diameter of apertures
+        D=0.5; #thickness of wall
+        
+        V[int( (.5-.5*D/xmax)*len(x) ) : int( (.5+.5*D/xmax)*len(x) ), 0 : int( (0.5-.5*a/xmax-d/xmax)*len(y))] = 150
+        V[int( (.5-.5*D/xmax)*len(x) ) : int( (.5+.5*D/xmax)*len(x) ), int( (0.5-0.5*a/xmax)*len(y) ) : int( (0.5+0.5*a/xmax)*len(y) ) ] = 150
+        V[int( (.5-.5*D/xmax)*len(x) ) : int( (.5+.5*D/xmax)*len(x) ), int( (0.5+0.5*a/xmax+d/xmax)*len(y) ) : len(y)-1 ] = 150
+        
+    elif (choosePreset == "ISW"):
+        # Infinite square well
+        wellWidth = xmax/2        
+        V[::,::] = 150;
+        V[ int( (0.5-0.5*wellWidth/xmax)*len(x) ):  int( (0.5+0.5*wellWidth/xmax)*len(x) ), int( (0.5-0.5*wellWidth/xmax)*len(y) ): int( (0.5+0.5*wellWidth/xmax)*len(y) )]=0
+        
+        psi0 = np.cos(np.pi/xmax*X)*np.cos(np.pi/ymax*Y);
+        
+        psi0[0:  int( (0.5-0.5*wellWidth/xmax)*len(x) ), :] = 0;
+        psi0[int( (0.5+0.5*wellWidth/xmax)*len(x) ) : len(x)-1, :] = 0;
+        psi0[:, 0 : int( (0.5-0.5*wellWidth/xmax)*len(y) )] = 0;
+        psi0[:, int( (0.5+0.5*wellWidth/xmax)*len(y) ) : len(y)-1] = 0;
+    else: 
+        error=True
+        
+    return V, psi0, error
+
+# Prompt user for potential
+print("Choose one of the following situations \n",
+      "ISW = Infinite Square Well \n",
+      "DS = Double Slit \n",
+      "BAR = Barrier",
+      flush=True)
+choosePreset = input("Input:")
+
+V, psi0, error = setup(choosePreset)
+
+if error:
+    sys.exit("Unknown potential")
+ 
 # Reshape to required format
 V = np.squeeze(np.reshape(V,len(x)*len(y), order='F'))
 
-# Define psi at t=0
-psi0 = np.array(np.zeros((len(x),len(y))), dtype=np.complex128)
 
-packetWidthSqr = 1/8;
-packetCenter = xmax*3/8
-k = 4000
-for i in range(len(y)):
-    psi0[:,i] = np.exp(-(x-packetCenter)**2/(2*packetWidthSqr) - 1j*k*x)# * np.sin(y[i]/2)**2
 #   Normalize psi
 
 # Reshape back
@@ -78,6 +126,7 @@ print('Starting loop')
 for k in range(0, len(t)-1):
     psi[k+1,:] = OpFactors(psi[k,:])
     psi2[k+1,:] = Op2Factors(Op1.dot(psi2[k,:]))
+
 
 # Plot
 
