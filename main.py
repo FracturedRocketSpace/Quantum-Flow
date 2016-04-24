@@ -8,9 +8,7 @@ from matplotlib import cm
 from matplotlib import animation
 import sys
 
-
-def calculateExplicit(x, t, dx, dt, psi, V):
-    print("Calculating explicit method...",flush=True)
+def constructHamiltonian(x,dx,V):
     #Construct hamiltonian
     diagonals=[-2*np.ones(len(x)), np.ones(len(x)-1), np.ones(len(x)-1)]
     H = -1/(2 * dx**2) * scipy.sparse.diags(diagonals, [0,1,-1], format="csc")
@@ -19,6 +17,13 @@ def calculateExplicit(x, t, dx, dt, psi, V):
     # Periodic boundary condition
     H[0,-1] = -1/(2 * dx**2)
     H[-1,0] = -1/(2 * dx**2)
+
+    return H
+
+def calculateExplicit(x, t, dx, dt, psi, V):
+    print("Calculating explicit method...",flush=True)
+    #Construct hamiltonian
+    H = constructHamiltonian(x,dx,V)
 
     H2 = scipy.sparse.identity(len(x), format="csc") - 1j*dt*H/2
 
@@ -35,13 +40,7 @@ def calculateExplicit(x, t, dx, dt, psi, V):
 def calculateImplicit(x,t,dx,dt,psi,V):
     print("Calculating implicit method...",flush=True)
     #Construct hamiltonian
-    diagonals=[-2*np.ones(len(x)), np.ones(len(x)-1), np.ones(len(x)-1)] 
-    H = -1/(2 * dx**2) * scipy.sparse.diags(diagonals, [0,1,-1], format="csc")
-    H += scipy.sparse.diags(V,0,format="csc")    
-    
-    # Periodic boundary condition
-    H[0,-1] = -1/(2 * dx**2)
-    H[-1,0] = -1/(2 * dx**2)    
+    H = constructHamiltonian(x,dx,V)
 
     H2 = scipy.sparse.identity(len(x),format="csc") + 1j*dt*H;
     
@@ -61,13 +60,7 @@ def calculateImplicit(x,t,dx,dt,psi,V):
 def calculateCrank(x,t,dx,dt,psi,V):
     print("Calculating Crank method...", flush=True)
     #Construct hamiltonian
-    diagonals=[-2*np.ones(len(x)), np.ones(len(x)-1), np.ones(len(x)-1)] 
-    H = -1/(2 * dx**2) * scipy.sparse.diags(diagonals, [0,1,-1], format="csc")
-    H += scipy.sparse.diags(V,0,format="csc")    
-    
-    # Periodic boundary condition
-    H[0,-1] = -1/(2 * dx**2)
-    H[-1,0] = -1/(2 * dx**2)
+    H = constructHamiltonian(x,dx,V)
     
     H2 = scipy.sparse.identity(len(x), format="csc") - 1j*dt*H/2
     H3 = scipy.sparse.identity(len(x), format="csc") + 1j*dt*H/2
@@ -119,7 +112,7 @@ t = np.arange(tmin, tmax, dt)
 
 X, T =np.meshgrid(x,t)
 
-# Define psi at t=0
+# Define psi at t=0, gaussian wave packet
 packetWidthSqr = 1/16
 packetCenter = 3/8*xmax
 k = 40
@@ -180,8 +173,8 @@ psiExplicit = calculateExplicit(x, t, dx, dt, np.copy(psi), V);
 #Implicit mehod
 psiImplicit = calculateImplicit(x, t, dx, dt, np.copy(psi), V)
 
-# Suzuki/Souflaki/Gyros Method
-psiGyros = calculateSuzuki(x, t, dx, dt, np.copy(psi), V);
+# Suzuki Method
+psiSuzuki = calculateSuzuki(x, t, dx, dt, np.copy(psi), V);
 
 # Crank–Nicholson Method
 psiCrank = calculateCrank(x, t, dx, dt, np.copy(psi), V);
@@ -193,7 +186,7 @@ surf = ax.plot_surface(X, T, np.absolute(psiExplicit), rstride=10, cstride=10,cm
 ax.view_init(90, 90); # Top view
 plt.xlabel("Position")
 plt.ylabel("Time")
-plt.title("Implicit method")
+plt.title("Explicit method")
 fig.colorbar(surf, shrink=0.5, aspect=5)
 # Hide z-axis
 ax.w_zaxis.line.set_lw(0.)
@@ -226,7 +219,7 @@ ax.set_zticks([])
 
 fig = plt.figure(4)
 ax = fig.gca(projection='3d')
-surf = ax.plot_surface(X, T, np.absolute(psiGyros), rstride=10, cstride=10,cmap=cm.coolwarm, linewidth=0, antialiased=False)
+surf = ax.plot_surface(X, T, np.absolute(psiSuzuki), rstride=10, cstride=10,cmap=cm.coolwarm, linewidth=0, antialiased=False)
 ax.view_init(90, 90); # Top view
 plt.xlabel("Position")
 plt.ylabel("Time")
@@ -242,18 +235,22 @@ plt.xlabel('Position')
 plt.ylabel("Potential")
 
 plt.figure(6)
-plt.plot(x,psi0);
+plt.plot(x,np.real(psi0));
 plt.xlabel('Position')
-plt.ylabel("Initial Psi")
+plt.ylabel("Real part of initial Psi")
+
+plt.figure(7)
+plt.plot(x,np.absolute(psi0));
+plt.xlabel('Position')
+plt.ylabel("Absolute value of initial Psi")
 
 # Anitmated plot of Psi
 fig = plt.figure()
-ax = plt.axes(xlim=(xmin,xmax), ylim=(np.min(np.real(psiCrank)),np.max(np.real(psiCrank))))
+ax = plt.axes(xlim=(xmin,xmax), ylim=(np.min(np.absolute(psiCrank)),np.max(np.absolute(psiCrank))))
 line, = ax.plot([],[], lw=2)
 axPot = ax.twinx()
 pot = axPot.plot([],[], lw=1)
 timestamp = ax.text(0.02, 0.95, '', transform=ax.transAxes)
-
 
 def animate(i):
     line.set_data(x, np.absolute(psiCrank[i,:]))
