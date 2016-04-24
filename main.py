@@ -20,14 +20,15 @@ def calculateExplicit(x, t, dx, dt, psi, V):
     H[0,-1] = -1/(2 * dx**2)
     H[-1,0] = -1/(2 * dx**2)
 
-    H2 = scipy.sparse.identity(len(x), format="csc") - 1j*dt*H/2
+    H2 = scipy.sparse.identity(len(x), format="csc") - 1j*dt*H
 
     for k in range(0, len(t)-1):
         # Compute next time step
         psi[k+1,:] =  H2.dot(psi[k,:])
         #Normalize new psi        
-        Norm=scipy.integrate.trapz(np.absolute(psi[k+1,:])**2,dx=dx)
-        psi[k+1,:]*=1/(Norm**(1/2))
+        if normSwitch==True:
+            Norm=scipy.integrate.trapz(np.absolute(psi[k+1,:])**2,dx=dx)
+            psi[k+1,:]*=1/(Norm**(1/2))
     
     print("Done",flush=True)
     return psi   
@@ -51,9 +52,10 @@ def calculateImplicit(x,t,dx,dt,psi,V):
     #Compute next time step
     for k in range(0, len(t)-1):
         psi[k+1,:] = factors(psi[k,:])
-        #Normalize new psi        
-        Norm=scipy.integrate.trapz(np.absolute(psi[k+1,:])**2,dx=dx)
-        psi[k+1,:]*=1/(Norm**(1/2))
+        #Normalize new psi
+        if normSwitch==True:        
+            Norm=scipy.integrate.trapz(np.absolute(psi[k+1,:])**2,dx=dx)
+            psi[k+1,:]*=1/(Norm**(1/2))
         
     print("Done",flush=True)  
     return psi
@@ -112,6 +114,8 @@ dx = .01;
 tmin = 0
 tmax = 0.5
 dt =  0.0001
+
+normSwitch=False; #Switch on/off normalization at each time step for explicit and implicit method
 
 # Determine x and t range
 x = np.arange(xmin, xmax, dx)
@@ -187,18 +191,21 @@ psiGyros = calculateSuzuki(x, t, dx, dt, np.copy(psi), V);
 psiCrank = calculateCrank(x, t, dx, dt, np.copy(psi), V);
 
 # Plot results
-fig = plt.figure(1)
-ax = fig.gca(projection='3d')
-surf = ax.plot_surface(X, T, np.absolute(psiExplicit), rstride=10, cstride=10,cmap=cm.coolwarm, linewidth=0, antialiased=False)
-ax.view_init(90, 90); # Top view
-plt.xlabel("Position")
-plt.ylabel("Time")
-plt.title("Implicit method")
-fig.colorbar(surf, shrink=0.5, aspect=5)
-# Hide z-axis
-ax.w_zaxis.line.set_lw(0.)
-ax.set_zticks([])
-
+if normSwitch==True:
+    fig = plt.figure(1)
+    ax = fig.gca(projection='3d')
+    surf = ax.plot_surface(X, T, np.absolute(psiExplicit), rstride=10, cstride=10,cmap=cm.coolwarm, linewidth=0, antialiased=False)
+    ax.view_init(90, 90); # Top view
+    plt.xlabel("Position")
+    plt.ylabel("Time")
+    plt.title("Explicit method")
+    fig.colorbar(surf, shrink=0.5, aspect=5)
+    # Hide z-axis
+    ax.w_zaxis.line.set_lw(0.)
+    ax.set_zticks([])
+else:
+    print("Explicit method: possibility that wave function explodes, so no plot displayed")    
+    
 fig = plt.figure(2)
 ax = fig.gca(projection='3d')
 surf = ax.plot_surface(X, T, np.absolute(psiImplicit), rstride=10, cstride=10,cmap=cm.coolwarm, linewidth=0, antialiased=False)
