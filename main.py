@@ -155,6 +155,8 @@ def definePotential(choosePotential):
         V[int((0.5+a/2+d/2)*len(V)):-1]=9223372036854775807
     elif (choosePotential == "BAR"):
         V[int(len(V)*5/8):int(len(V)*6/8)] = 300
+    elif (choosePotential == "Gauss"):
+        V = 10000-10000*np.exp(-(x-xmax/2)**2)
     else: 
         error=True
         
@@ -165,7 +167,8 @@ print("Choose one of the following potentials \n",
       "ISW = Infinite Square Well \n",
       "WW = Wider Well\n",
       "DAP = Double aperture potential\n",
-      "BAR = Barrier",
+      "BAR = Barrier \n",
+      "Gauss = Gaussian well",
       flush=True)
 choosePotential = input("Input:")
 
