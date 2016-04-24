@@ -90,7 +90,10 @@ if error:
 # Reshape to required format
 V = np.squeeze(np.reshape(V,len(x)*len(y), order='F'))
 
-#   Normalize psi
+#Normalize psi0
+Norm=scipy.integrate.simps(scipy.integrate.simps(np.absolute(psi0)**2,y),x)
+psi0*=1/(Norm**(1/2))
+print(scipy.integrate.simps(scipy.integrate.simps(np.absolute(psi0)**2,y),x))
 
 # Reshape in required format
 psi0 = np.squeeze( np.reshape(psi0, len(x)*len(y), order='F' ) );
