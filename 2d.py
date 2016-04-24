@@ -14,12 +14,12 @@ xmax = 2*math.pi;
 dx = 0.05;
 
 ymin = 0
-ymax = 2*math.pi-2*dx;
+ymax = 2*math.pi;
 dy = 0.05;
 
 tmin = 0
-tmax = 5
-dt = 0.01
+tmax = 2
+dt = 0.005;
 
 # Determine x and t range
 x = np.arange(xmin, xmax, dx)
@@ -29,12 +29,12 @@ t = np.arange(tmin, tmax, dt)
 X, Y =np.meshgrid(x,y)
 
 print('Init Psy and potential')
-# Define V
+# The presets
 def setup(choosePreset):
     # Initiate potential and error
     V = np.zeros((len(x),len(y)));
     error = False;
-    
+
     # Define psi at t=0, gaussian wave packet moving in the x direction
     psi0 = np.array(np.zeros((len(x),len(y))), dtype=np.complex128)
 
@@ -43,35 +43,35 @@ def setup(choosePreset):
     k = 4000
     for i in range(len(y)):
         psi0[:,i] = np.exp(-(x-packetCenter)**2/(2*packetWidthSqr) - 1j*k*x)
-    
+
     if (choosePreset == "BAR"):
         # Barrier
         V[int(len(V)*5/8):int(len(V)*6/8),::] = 150
     elif (choosePreset == "DS"):
         # Double aperture potential
-        a=2; #distance between apertures
-        d=0.5; #diameter of apertures
+        a=1; #distance between apertures
+        d=0.1; #diameter of apertures
         D=0.5; #thickness of wall
-        
-        V[int( (.5-.5*D/xmax)*len(x) ) : int( (.5+.5*D/xmax)*len(x) ), 0 : int( (0.5-.5*a/xmax-d/xmax)*len(y))] = 150
-        V[int( (.5-.5*D/xmax)*len(x) ) : int( (.5+.5*D/xmax)*len(x) ), int( (0.5-0.5*a/xmax)*len(y) ) : int( (0.5+0.5*a/xmax)*len(y) ) ] = 150
-        V[int( (.5-.5*D/xmax)*len(x) ) : int( (.5+.5*D/xmax)*len(x) ), int( (0.5+0.5*a/xmax+d/xmax)*len(y) ) : len(y)-1 ] = 150
-        
+
+        V[int( (.5-.5*D/xmax)*len(x) ) : int( (.5+.5*D/xmax)*len(x) ), 0 : int( (0.5-.5*a/xmax-d/xmax)*len(y))] = 10**20;
+        V[int( (.5-.5*D/xmax)*len(x) ) : int( (.5+.5*D/xmax)*len(x) ), int( (0.5-0.5*a/xmax)*len(y) ) : int( (0.5+0.5*a/xmax)*len(y) ) ] = 10**20
+        V[int( (.5-.5*D/xmax)*len(x) ) : int( (.5+.5*D/xmax)*len(x) ), int( (0.5+0.5*a/xmax+d/xmax)*len(y) ) : len(y) ] = 10**20;
+
     elif (choosePreset == "ISW"):
         # Infinite square well
-        wellWidth = xmax/2        
-        V[::,::] = 150;
+        wellWidth = xmax/2
+        V[::,::] = 10**20; # Almost infinite
         V[ int( (0.5-0.5*wellWidth/xmax)*len(x) ):  int( (0.5+0.5*wellWidth/xmax)*len(x) ), int( (0.5-0.5*wellWidth/xmax)*len(y) ): int( (0.5+0.5*wellWidth/xmax)*len(y) )]=0
-        
-        psi0 = np.cos(np.pi/xmax*X)*np.cos(np.pi/ymax*Y);
-        
+        # Define another psi0, we do not want a wave packet here
+        psi0 = np.sin(np.pi/wellWidth*(X-wellWidth/2) ) *np.sin(np.pi/wellWidth*(Y-wellWidth/2) );
+        # Make wavefunction outside of well zero
         psi0[0:  int( (0.5-0.5*wellWidth/xmax)*len(x) ), :] = 0;
-        psi0[int( (0.5+0.5*wellWidth/xmax)*len(x) ) : len(x)-1, :] = 0;
+        psi0[int( (0.5+0.5*wellWidth/xmax)*len(x) ) : len(x), :] = 0;
         psi0[:, 0 : int( (0.5-0.5*wellWidth/xmax)*len(y) )] = 0;
-        psi0[:, int( (0.5+0.5*wellWidth/xmax)*len(y) ) : len(y)-1] = 0;
-    else: 
+        psi0[:, int( (0.5+0.5*wellWidth/xmax)*len(y) ) : len(y)] = 0;
+    else:
         error=True
-        
+
     return V, psi0, error
 
 # Prompt user for potential
@@ -86,13 +86,13 @@ V, psi0, error = setup(choosePreset)
 
 if error:
     sys.exit("Unknown potential")
- 
+
 # Reshape to required format
 V = np.squeeze(np.reshape(V,len(x)*len(y), order='F'))
 
 #   Normalize psi
 
-# Reshape back
+# Reshape in required format
 psi0 = np.squeeze( np.reshape(psi0, len(x)*len(y), order='F' ) );
 
 # Inititate psi
@@ -120,7 +120,7 @@ Op1 = scipy.sparse.identity(len(x)*len(y), format="csc") - 1j*dt*H/2;
 Op2 = scipy.sparse.identity(len(x)*len(y), format="csc") + 1j*dt*H/2;
 Op2Factors = scipy.sparse.linalg.factorized(Op2)
 
-#Compute next time step
+#Compute next time steps
 print('Starting loop')
 for k in range(0, len(t)-1):
     psi[k+1,:] = OpFactors(psi[k,:])
@@ -128,6 +128,7 @@ for k in range(0, len(t)-1):
 
 
 #Plot results
+# Psi0
 fig =plt.figure(1)
 ax = fig.gca(projection='3d')
 surf = ax.plot_surface(X, Y, np.absolute(np.reshape(psi0,(len(y),len(x)))), cmap=cm.coolwarm, linewidth=0, antialiased=False)
@@ -139,7 +140,7 @@ fig.colorbar(surf, shrink=0.5, aspect=5)
 # Hide z-axis
 ax.w_zaxis.line.set_lw(0.)
 ax.set_zticks([])
-#
+# Potential
 fig =plt.figure(2)
 ax = fig.gca(projection='3d')
 surf = ax.plot_surface(X, Y, np.absolute(np.reshape(V,(len(y),len(x)))), cmap=cm.coolwarm, linewidth=0, antialiased=False)
@@ -152,6 +153,9 @@ fig.colorbar(surf, shrink=0.5, aspect=5)
 ax.w_zaxis.line.set_lw(0.)
 ax.set_zticks([])
 
+
+# Do the animations
+# Note that they are very inefficient because there is no easy set_data for 3d plots.
 sync_num = np.zeros(2);
 plot_args = {'cmap':cm.coolwarm, 'linewidth':0, 'antialiased':False, 'vmin':-1, 'vmax':1}
 
@@ -169,7 +173,7 @@ def update_3d1(num):
     #
     ax1.set_xlabel("Position X")
     ax1.set_ylabel("Position Y")
-    ax1.set_title("Implicit: Time = %.4f" % t[num])
+    ax1.set_title("Absolute Implicit: Time = %.4f" % t[num])
     ax1.set_zlim(-1, 1)
     # Hide z-axis
     ax1.w_zaxis.line.set_lw(0.)
@@ -178,7 +182,7 @@ def update_3d1(num):
     #
     return surf1
 
-line_ani = animation.FuncAnimation(fig, update_3d1, frames=len(t), interval=100, blit=False)
+line_ani = animation.FuncAnimation(fig, update_3d1, frames=len(t), interval=250, blit=False)
 
 #Crank animation
 fig2 = plt.figure(4)
@@ -195,7 +199,7 @@ def update_3d2(num):
     #
     ax2.set_xlabel("Position X")
     ax2.set_ylabel("Position Y")
-    ax2.set_title("Crank: Time = %.4f" % t[num])
+    ax2.set_title("Absolute Crank: Time = %.4f" % t[num])
     ax2.set_zlim(-1, 1)
     # Hide z-axis
     ax2.w_zaxis.line.set_lw(0.)
@@ -203,4 +207,6 @@ def update_3d2(num):
     #
     return surf2
 
-line_ani2 = animation.FuncAnimation(fig, update_3d2, frames=len(t), interval=100, blit=False)
+line_ani2 = animation.FuncAnimation(fig, update_3d2, frames=len(t), interval=250, blit=False)
+
+plt.ion();
